@@ -9,12 +9,14 @@ dist/
 .venv/
 venv/
 
-# Rebuildable: the warehouse and the feature cache.
-data/
+# Rebuildable: the warehouse and the feature cache. Anchored with a leading slash -- a bare
+# `data/` also matches src/deliveryrisk/data/, which silently drops the whole module from the
+# repository while everything still works locally.
+/data/
 
 # Throwaway runs are ignored; the committed headline results are what docs/RESULTS.md is
 # rendered from, so they are tracked. (A negation cannot re-include a file inside an excluded
 # directory, hence `results/*` rather than `results/`.)
-results/*
-!results/headline/
-results/headline/cache/
+/results/*
+!/results/headline/
+/results/headline/cache/
