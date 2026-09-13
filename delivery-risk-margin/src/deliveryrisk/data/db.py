@@ -14,10 +14,11 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import pandas as pd
 

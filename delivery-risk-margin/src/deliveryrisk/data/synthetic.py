@@ -159,7 +159,7 @@ class SyntheticConfig:
     nudge_compliance_warehouse: float = 0.30  # a warehouse is already running at its floor
     expedite_transit_reduction: float = 0.42  # share of transit above the floor removed
 
-    def replace(self, **kw) -> "SyntheticConfig":
+    def replace(self, **kw) -> SyntheticConfig:
         d = asdict(self)
         d.update(kw)
         return SyntheticConfig(**d)

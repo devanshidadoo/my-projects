@@ -39,7 +39,7 @@ being scored. Keeping both facts true at once is what :mod:`deliveryrisk.feature
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 #: Logical column types, mapped per dialect below.
 TYPES = {
@@ -314,7 +314,7 @@ class SchemaViolation:
     detail: str = ""
 
 
-def validate_tables(frames: dict[str, "object"]) -> list[SchemaViolation]:
+def validate_tables(frames: dict[str, object]) -> list[SchemaViolation]:
     """Check a dict of DataFrames against the declared schema before it reaches a database.
 
     Catching a missing column or a null primary key here produces a message naming the table and
