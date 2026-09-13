@@ -1,0 +1,71 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,gbdt]"
+      - name: Lint
+        run: ruff check src tests experiments scripts
+      - name: Unit and property tests
+        run: pytest tests -q --durations=10
+      - name: End-to-end smoke run
+        run: |
+          PYTHONPATH=src python experiments/run_all.py \
+            --config configs/smoke.yaml --out-dir results/smoke \
+            --docs-dir results/smoke/docs --cache-dir results/smoke/cache
+      - name: Check the smoke run produced its artefacts
+        run: |
+          test -s results/smoke/policy_comparison.csv
+          test -s results/smoke/leakage.csv
+          test -s results/smoke/docs/figures/policy_value.png
+          test -s results/smoke/docs/RESULTS.md
+          # A throwaway run must not touch the committed report or figures.
+          git diff --exit-code -- docs/
+
+  mysql:
+    # The schema is shaped for MySQL 8 and the feature query leans on window functions it only
+    # grew in 8.0, so "it also runs on MySQL" is checked against a real server rather than
+    # asserted in the README.
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: deliveryrisk
+          MYSQL_DATABASE: deliveryrisk
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pdeliveryrisk"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,gbdt,mysql]"
+      - name: The same features, on both engines
+        env:
+          DELIVERYRISK_MYSQL_URL: mysql+pymysql://root:deliveryrisk@127.0.0.1:3306/deliveryrisk
+        run: pytest tests/test_mysql.py -q -rs

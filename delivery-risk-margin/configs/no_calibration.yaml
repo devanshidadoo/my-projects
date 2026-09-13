@@ -1,0 +1,18 @@
+# The ablation behind RESULTS §4: the same model and the same decision rule, with the isotonic
+# step removed. The scores still rank identically -- a calibrator is a monotone map -- so every
+# ranking metric is unchanged and only the money moves.
+name: no_calibration
+description: Headline setup with calibration switched off, to price the calibration step.
+output_dir: results/no_calibration
+seed: 7
+
+data:
+  source: synthetic
+  database_url: sqlite:///data/deliveryrisk.db
+  synthetic: {n_orders: 99441, n_unique_customers: 96096, n_sellers: 3095, n_products: 32951, span_days: 730, seed: 7}
+
+features: {mode: point_in_time, trailing_days: 30.0, prior_weight: 15.0}
+split: {train_share: 0.6, valid_share: 0.15}
+model: {kind: gbdt, n_estimators: 1200, learning_rate: 0.03, num_leaves: 15, min_child_samples: 80, seed: 13}
+calibration: {method: none, n_bins: 20}
+policies: {fixed_rates: [0.10, 0.20], budget_share: 0.5, budget_grid: [0.1, 0.25, 0.5, 1.0]}

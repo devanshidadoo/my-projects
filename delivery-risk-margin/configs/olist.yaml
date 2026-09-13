@@ -1,0 +1,22 @@
+# The real Olist files. Everything runs except the realised-contribution comparison, which needs
+# a counterfactual the extract does not contain -- see docs/METHODOLOGY.md §8 and
+# src/deliveryrisk/data/olist.py.
+#
+#   ./scripts/download_olist.sh data/raw     # needs a Kaggle API token
+#   drisk ingest-olist --raw-dir data/raw --database-url sqlite:///data/olist.db
+#   drisk leak-audit configs/olist.yaml
+name: olist
+description: The published Olist Brazilian e-commerce release, loaded into the same nine tables.
+output_dir: results/olist
+seed: 7
+
+data:
+  source: olist
+  raw_dir: data/raw
+  database_url: sqlite:///data/olist.db
+
+features: {mode: point_in_time, trailing_days: 30.0, prior_weight: 15.0}
+split: {train_share: 0.6, valid_share: 0.15}
+model: {kind: gbdt, n_estimators: 1200, learning_rate: 0.03, num_leaves: 15, min_child_samples: 80, seed: 13}
+calibration: {method: isotonic, n_bins: 20}
+policies: {fixed_rates: [0.10, 0.20], budget_share: 0.5, budget_grid: [0.1, 0.25, 0.5, 1.0]}
