@@ -27,6 +27,29 @@ HEADER = [
 ]
 
 
+def test_feature_sql_avoids_syntax_mysql_does_not_have():
+    """The feature SQL is one dialect for both engines, so it may not use SQLite-only forms.
+
+    `CREATE INDEX IF NOT EXISTS` is the trap: valid on SQLite, a syntax error on MySQL 8, and
+    invisible until a real server rejects it. Every table these indexes sit on is dropped
+    immediately before it is rebuilt, so the guard was never doing anything anyway.
+    """
+    sql = "\n".join(
+        [
+            ORDER_FACTS_SQL,
+            build_events_sql(trailing_days=30.0),
+            *[build_entity_sql(spec) for spec in ENTITIES],
+            build_features_sql(),
+        ]
+    )
+    assert "CREATE INDEX IF NOT EXISTS" not in sql.upper()
+    # Each index is on a table this script has just dropped and rebuilt.
+    for line in sql.splitlines():
+        if line.strip().upper().startswith("CREATE INDEX"):
+            table = line.split(" ON ")[1].split("(")[0].strip()
+            assert f"DROP TABLE IF EXISTS {table}" in sql, table
+
+
 @pytest.mark.parametrize("dialect", ["sqlite", "mysql"])
 def test_committed_schema_matches_the_generator(dialect):
     path = SQL_DIR / f"schema_{dialect}.sql"

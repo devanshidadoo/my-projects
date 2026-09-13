@@ -85,7 +85,9 @@ JOIN carriers ca       ON ca.carrier_id = l.carrier_id
 LEFT JOIN order_pay pay ON pay.order_id = o.order_id
 WHERE o.approved_ts IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_order_facts_approved ON order_facts (approved_ts);
+-- Plain CREATE INDEX, not IF NOT EXISTS: MySQL has no such form, and the table was dropped two
+-- statements ago, so the index cannot already exist.
+CREATE INDEX ix_order_facts_approved ON order_facts (approved_ts);
 
 DROP TABLE IF EXISTS pit_events;
 CREATE TABLE pit_events AS
@@ -357,7 +359,7 @@ SELECT 'customer' AS entity_type,
        0.0 AS own_transit_days, 0.0 AS own_days_over, 0 AS own_in_recent
 FROM order_facts
 WHERE delivered_ts IS NOT NULL AND pickup_ts IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_pit_events_key ON pit_events (entity_type, entity_key, ev_ts);
+CREATE INDEX ix_pit_events_key ON pit_events (entity_type, entity_key, ev_ts);
 
 DROP TABLE IF EXISTS feat_seller;
 CREATE TABLE feat_seller AS WITH
@@ -408,7 +410,7 @@ seller_f AS (
     FROM seller_w
     WHERE ev_kind = 0
 ) SELECT * FROM seller_f;
-CREATE INDEX IF NOT EXISTS ix_feat_seller_order ON feat_seller (order_id);
+CREATE INDEX ix_feat_seller_order ON feat_seller (order_id);
 
 DROP TABLE IF EXISTS feat_lane;
 CREATE TABLE feat_lane AS WITH
@@ -459,7 +461,7 @@ lane_f AS (
     FROM lane_w
     WHERE ev_kind = 0
 ) SELECT * FROM lane_f;
-CREATE INDEX IF NOT EXISTS ix_feat_lane_order ON feat_lane (order_id);
+CREATE INDEX ix_feat_lane_order ON feat_lane (order_id);
 
 DROP TABLE IF EXISTS feat_carrier;
 CREATE TABLE feat_carrier AS WITH
@@ -510,7 +512,7 @@ carrier_f AS (
     FROM carrier_w
     WHERE ev_kind = 0
 ) SELECT * FROM carrier_f;
-CREATE INDEX IF NOT EXISTS ix_feat_carrier_order ON feat_carrier (order_id);
+CREATE INDEX ix_feat_carrier_order ON feat_carrier (order_id);
 
 DROP TABLE IF EXISTS feat_category;
 CREATE TABLE feat_category AS WITH
@@ -557,7 +559,7 @@ category_f AS (
     FROM category_w
     WHERE ev_kind = 0
 ) SELECT * FROM category_f;
-CREATE INDEX IF NOT EXISTS ix_feat_category_order ON feat_category (order_id);
+CREATE INDEX ix_feat_category_order ON feat_category (order_id);
 
 DROP TABLE IF EXISTS feat_customer;
 CREATE TABLE feat_customer AS WITH
@@ -604,7 +606,7 @@ customer_f AS (
     FROM customer_w
     WHERE ev_kind = 0
 ) SELECT * FROM customer_f;
-CREATE INDEX IF NOT EXISTS ix_feat_customer_order ON feat_customer (order_id);
+CREATE INDEX ix_feat_customer_order ON feat_customer (order_id);
 
 
 SELECT
