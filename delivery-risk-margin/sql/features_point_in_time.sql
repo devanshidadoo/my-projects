@@ -652,11 +652,11 @@ SELECT
     f.distance_km, f.base_transit_days, f.reliability_index, f.daily_capacity,
     (f.estimated_delivery_ts - f.approved_ts) / (86400.0 * f.base_transit_days) AS slack_transit_ratio,
     CASE WHEN f.origin_state = f.dest_state THEN 1 ELSE 0 END AS same_state,
-    CAST(f.approved_ts / 86400.0 AS INTEGER) % 7             AS approved_dow,
-    CAST(f.approved_ts % 86400.0 / 3600.0 AS INTEGER)        AS approved_hour,
-    CASE WHEN CAST(f.approved_ts / 86400.0 AS INTEGER) % 7 IN (5, 6) THEN 1 ELSE 0 END
+    ((FLOOR(f.approved_ts / 86400.0)) - FLOOR((FLOOR(f.approved_ts / 86400.0)) / 7) * 7)                        AS approved_dow,
+    FLOOR(((f.approved_ts) - FLOOR((f.approved_ts) / 86400.0) * 86400.0) / 3600.0)                        AS approved_hour,
+    CASE WHEN ((FLOOR(f.approved_ts / 86400.0)) - FLOOR((FLOOR(f.approved_ts / 86400.0)) / 7) * 7) IN (5, 6) THEN 1 ELSE 0 END
         AS approved_weekend,
-    CAST(CAST(f.purchase_ts / 86400.0 AS INTEGER) % 365 / 7 AS INTEGER) AS purchase_week_of_year,
+    FLOOR(((FLOOR(f.purchase_ts / 86400.0)) - FLOOR((FLOOR(f.purchase_ts / 86400.0)) / 365) * 365) / 7.0)                       AS purchase_week_of_year,
     f.payment_type, f.service_level, f.fulfilment_mode, f.category,
     f.origin_state, f.dest_state, f.carrier_id
 ,

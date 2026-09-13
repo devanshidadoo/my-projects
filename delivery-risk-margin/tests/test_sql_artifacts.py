@@ -42,7 +42,14 @@ def test_feature_sql_avoids_syntax_mysql_does_not_have():
             build_features_sql(),
         ]
     )
-    assert "CREATE INDEX IF NOT EXISTS" not in sql.upper()
+    upper = sql.upper()
+    assert "CREATE INDEX IF NOT EXISTS" not in upper
+    # SQLite truncates a CAST to INTEGER, MySQL rejects the type name, and the spelling that
+    # parses on both (AS SIGNED) does not truncate on SQLite.
+    assert "AS INTEGER)" not in upper
+    assert "AS SIGNED)" not in upper
+    # `%` on reals: SQLite casts both operands to integers first, MySQL does not.
+    assert "%" not in sql
     # Each index is on a table this script has just dropped and rebuilt.
     for line in sql.splitlines():
         if line.strip().upper().startswith("CREATE INDEX"):
