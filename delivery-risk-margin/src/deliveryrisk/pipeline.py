@@ -223,7 +223,6 @@ def run_experiment(cfg: ExperimentConfig, cache_dir: Path | None = None) -> dict
     out: dict[str, object] = {"dataset_summary": prep.summary}
     model_rows, decile_frames, policy_frames = [], [], []
     fitted: dict[str, FittedModels] = {}
-    scores: dict[str, np.ndarray] = {}
 
     from deliveryrisk.evaluation.metrics import decile_table, ranking_metrics
 
@@ -232,8 +231,6 @@ def run_experiment(cfg: ExperimentConfig, cache_dir: Path | None = None) -> dict
         fitted[kind] = models
         raw_test, cal_test = score(models, test)
         raw_valid, cal_valid = score(models, valid)
-        scores[f"{kind}_raw"] = raw_test
-        scores[f"{kind}_calibrated"] = cal_test
         y_test = test.y_late.to_numpy(dtype=float)
         for label, p in (("raw", raw_test), ("calibrated", cal_test)):
             row = {"model": kind, "scores": label, **ranking_metrics(y_test, p),
