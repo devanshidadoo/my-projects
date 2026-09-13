@@ -198,7 +198,9 @@ JOIN carriers ca       ON ca.carrier_id = l.carrier_id
 LEFT JOIN order_pay pay ON pay.order_id = o.order_id
 WHERE o.approved_ts IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_order_facts_approved ON order_facts (approved_ts);
+-- Plain CREATE INDEX, not IF NOT EXISTS: MySQL has no such form, and the table was dropped two
+-- statements ago, so the index cannot already exist.
+CREATE INDEX ix_order_facts_approved ON order_facts (approved_ts);
 """
 
 
@@ -289,7 +291,7 @@ def build_events_sql(
     return (
         "DROP TABLE IF EXISTS pit_events;\n"
         f"CREATE TABLE pit_events AS{union};\n"
-        "CREATE INDEX IF NOT EXISTS ix_pit_events_key "
+        "CREATE INDEX ix_pit_events_key "  # the table is dropped above; see order_facts
         "ON pit_events (entity_type, entity_key, ev_ts);\n"
     )
 
@@ -487,7 +489,7 @@ def build_entity_sql(
     return (
         f"DROP TABLE IF EXISTS feat_{n};\n"
         f"CREATE TABLE feat_{n} AS WITH{cte} SELECT * FROM {n}_f;\n"
-        f"CREATE INDEX IF NOT EXISTS ix_feat_{n}_order ON feat_{n} (order_id);\n"
+        f"CREATE INDEX ix_feat_{n}_order ON feat_{n} (order_id);\n"
     )
 
 
