@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from deliveryrisk.data.db import Database, DatabaseError, to_datetime
+from deliveryrisk.data.db import Database, DatabaseError, _split_statements, to_datetime
 from deliveryrisk.data.schema import (
     POST_DECISION_COLUMNS,
     TABLES,
@@ -88,6 +88,44 @@ def test_epoch_conversion_round_trips():
     ts = to_datetime(pd.Series([0.0, 86_400.0]))
     assert str(ts.iloc[0].date()) == "2017-01-01"
     assert str(ts.iloc[1].date()) == "2017-01-02"
+
+
+def test_mysql_comments_escape_apostrophes():
+    """`carrier's published transit time` in a COMMENT closes the literal and breaks the DDL.
+
+    MySQL takes the apostrophe as the end of the string, so the statement is not merely hard to
+    split -- it is invalid, and the server rejects it. This is a regression test for DDL that
+    looked fine on SQLite (which emits no comments at all) and failed on a real MySQL 8.
+    """
+    sql = schema_ddl("mysql")
+    assert "carrier''s published transit time" in sql
+    for stmt in _split_statements(sql):
+        assert stmt.count("'") % 2 == 0, stmt[:120]
+
+
+def test_every_object_becomes_exactly_one_statement():
+    n_indexes = sum(len(t.indexes) for t in TABLES)
+    assert len(_split_statements(schema_ddl("mysql"))) == len(TABLES) + n_indexes
+    assert len(_split_statements(schema_ddl("sqlite"))) == len(TABLES) + n_indexes
+
+
+def test_splitter_ignores_semicolons_inside_strings_and_comments():
+    """Both hazards appear in this project's own DDL, and both cut a statement in half."""
+    script = """
+    -- a leading comment; with a semicolon in it
+    CREATE TABLE t (a INT COMMENT 'first; second', b INT);
+    CREATE INDEX ix ON t (a);
+    """
+    stmts = _split_statements(script)
+    assert len(stmts) == 2, stmts
+    assert "first; second" in stmts[0]
+    assert stmts[1].startswith("CREATE INDEX")
+
+
+def test_splitter_handles_escaped_quotes():
+    stmts = _split_statements("SELECT 'it''s fine; really'; SELECT 2;")
+    assert len(stmts) == 2
+    assert stmts[0] == "SELECT 'it''s fine; really'"
 
 
 def test_post_decision_columns_are_named_in_one_place():

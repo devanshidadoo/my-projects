@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS shipping_lanes (
   dest_state VARCHAR(64) NOT NULL,
   carrier_id VARCHAR(40) NOT NULL,
   distance_km DOUBLE NOT NULL,
-  base_transit_days DOUBLE NOT NULL COMMENT 'carrier's published transit time',
+  base_transit_days DOUBLE NOT NULL COMMENT 'carrier''s published transit time',
   PRIMARY KEY (lane_id),
   FOREIGN KEY (carrier_id) REFERENCES carriers(carrier_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

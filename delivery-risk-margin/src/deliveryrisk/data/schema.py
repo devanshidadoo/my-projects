@@ -76,7 +76,10 @@ class Column:
         if not self.null:
             sql += " NOT NULL"
         if self.comment and dialect == "mysql":
-            sql += f" COMMENT '{self.comment}'"
+            # An apostrophe in a comment ("carrier's published transit time") closes the string
+            # literal early and produces DDL that is not merely unsplittable but invalid.
+            escaped = self.comment.replace("\\", "\\\\").replace("'", "''")
+            sql += f" COMMENT '{escaped}'"
         return sql
 
 
