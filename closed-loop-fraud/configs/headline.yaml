@@ -1,0 +1,116 @@
+# Headline experiment: 18 monthly retraining cycles on an IEEE-CIS-calibrated stream.
+#
+# Reproduce with:  clfraud simulate configs/headline.yaml
+# Every number in docs/RESULTS.md and the README comes from this file plus its seeds.
+
+name: headline
+description: >
+  Closed-loop retraining under label censoring. Five arms share one stream, one feature matrix
+  and one model class, and differ only in which labels come back and how they are weighted.
+output_dir: results/headline
+
+data:
+  source: synthetic
+  synthetic:
+    # Calibrated to IEEE-CIS train_transaction.csv: 590,540 rows, 3.5 % fraud, 13,553 cards.
+    n_transactions: 590540
+    n_months: 18
+    fraud_rate: 0.035
+    n_cards: 13553
+    n_merchants: 2400
+    n_devices: 9000
+    seed: 20250314
+    # Fraud concentrates in (merchant-category, hour-of-day) cells that rotate every two
+    # months. This is the component of the signal with a short shelf life: knowing which
+    # categories are hot right now requires *recent* labels, and recent labels are exactly what
+    # a closed loop stops delivering.
+    n_mcc: 120
+    n_hour_buckets: 6
+    hot_cell_count: 40
+    hot_cell_life_months: 2
+    hot_cell_share: 0.75
+    legit_burst_share: 0.11
+
+loop:
+  cycle_days: 30.0
+  n_cycles: 18
+  warmup_cycles: 2          # pre-deployment bootstrap: all traffic approved, labels complete
+  train_window_cycles: 3    # retrain on the trailing quarter, as most issuers do
+  recency_half_life_cycles: null   # hard window; see configs/ablation_recency.yaml
+  explore_window_cycles: 12 # exploration labels are scarce and unbiased, so keep them longer
+  decline_budget: 0.06
+  max_train_rows: 200000
+  seed: 4242
+  label:
+    delay_days: 45.0        # chargeback maturation: 1.5 cycles of lag on every label
+  model:
+    n_estimators: 300
+    learning_rate: 0.05
+    num_leaves: 48
+    min_child_samples: 40
+    random_state: 7
+  costs:
+    fp_cost_rate: 0.015
+    recovery_rate: 0.15
+
+baseline_arm: naive
+oracle_arm: oracle
+
+arms:
+  - name: oracle
+    oracle_labels: true
+    description: >
+      Upper bound. Declines identically to every other arm, but every label comes back anyway.
+      Physically impossible -- a declined transaction never charges back -- and that is the
+      point: it isolates the cost of censoring from the cost of the decision itself.
+
+  - name: naive
+    description: >
+      What most production stacks do. Retrain on approved-and-matured labels, treat them as a
+      random sample of traffic, ship it.
+
+  - name: frozen
+    retrain: false
+    description: >
+      Control for drift. Never retrains, so any decay here is the world moving, not the loop.
+
+  - name: explore_only
+    exploration: {rate: 0.02, mode: cost_aware}
+    description: >
+      Exploration without reweighting. Separates "having the labels" from "using them
+      correctly" -- 2 % of declines is 0.1 % of traffic, so unweighted it is nearly invisible.
+
+  - name: explore_ipw
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights: {scheme: ipw, self_normalise: true, stabilise: true, max_weight: 250.0}
+    description: >
+      The proposal. 2 % cost-aware exploration of would-be declines, trained with
+      self-normalised inverse-propensity weights from the logged randomisation.
+
+  - name: explore_ipw_cap50
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights: {scheme: ipw, self_normalise: true, stabilise: true, max_weight: 50.0}
+    description: >
+      Weight ablation. The propensity floor is 0.004, so the default cap of 250 lets a single
+      explored row carry the weight of 250 ordinary ones and drives effective sample size into
+      the floor. Capping at 50 trades a little bias for a lot of variance.
+
+  - name: explore_ipw_unstable
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights:
+      scheme: ipw
+      self_normalise: false
+      stabilise: false
+      max_weight: null
+    description: >
+      Weight ablation, the other direction: raw 1/e with no stabiliser at all. This is what
+      "just use inverse propensity weights" gets you when nobody looks at the weight
+      distribution.
+
+  - name: explore_ipw_estimated
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights: {scheme: ipw, self_normalise: true, stabilise: true, max_weight: 250.0}
+    estimate_propensity: true
+    description: >
+      Same, but e(x) is *estimated* from features instead of read from the decision log --
+      the realistic case when a legacy stack records decisions without recording randomness.

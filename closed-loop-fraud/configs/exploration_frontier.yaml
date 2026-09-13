@@ -1,0 +1,45 @@
+# Exploration design sweep: what each way of spending the exploration budget actually buys.
+# Driven by experiments/run_frontier.py, which varies `rate` across {0.005 .. 0.05} per mode.
+name: exploration_frontier
+description: >
+  Recall recovered against fraud dollars deliberately let through, for four exploration designs
+  at matched budgets. The question is not whether to explore but where.
+output_dir: results/frontier
+
+data:
+  source: synthetic
+  synthetic:
+    n_transactions: 295270      # half scale: the sweep fits many arms, and the ordering is stable
+    n_months: 18
+    n_cards: 8000
+    n_merchants: 1600
+    n_devices: 5000
+    n_mcc: 90
+    n_hour_buckets: 6
+    hot_cell_count: 30
+    hot_cell_life_months: 2
+    hot_cell_share: 0.75
+    seed: 20250314
+
+loop:
+  cycle_days: 30.0
+  n_cycles: 18
+  warmup_cycles: 2
+  train_window_cycles: 3
+  recency_half_life_cycles: null
+  explore_window_cycles: 12
+  decline_budget: 0.06
+  max_train_rows: 120000
+  seed: 4242
+  model: {n_estimators: 250, num_leaves: 48}
+
+baseline_arm: naive
+oracle_arm: oracle
+
+arms:
+  - name: oracle
+    oracle_labels: true
+  - name: naive
+  - name: explore_ipw
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights: {scheme: ipw}
