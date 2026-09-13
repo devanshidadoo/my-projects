@@ -153,7 +153,6 @@ def stage_policies(cfg: ExperimentConfig, res: dict, out: Path) -> tuple[pd.Data
         }
     )
     _write(acts, out, "policy_action_counts")
-    mix.attrs["actions"] = acts
     return comparison, mix
 
 
