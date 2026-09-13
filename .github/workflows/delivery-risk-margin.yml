@@ -1,9 +1,17 @@
-name: ci
+# Workflows only run from the repository root, so this lives here rather than inside the
+# project directory, and every step runs with delivery-risk-margin/ as its working directory.
+name: delivery-risk-margin
 
 on:
   push:
     branches: ["**"]
+    paths: ["delivery-risk-margin/**", ".github/workflows/delivery-risk-margin.yml"]
   pull_request:
+    paths: ["delivery-risk-margin/**", ".github/workflows/delivery-risk-margin.yml"]
+
+defaults:
+  run:
+    working-directory: delivery-risk-margin
 
 jobs:
   test:
@@ -38,7 +46,7 @@ jobs:
           test -s results/smoke/docs/figures/policy_value.png
           test -s results/smoke/docs/RESULTS.md
           # A throwaway run must not touch the committed report or figures.
-          git diff --exit-code -- docs/
+          git diff --exit-code -- docs/ results/headline/
 
   mysql:
     # The schema is shaped for MySQL 8 and the feature query leans on window functions it only
