@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clfraud"
+version = "0.3.0"
+description = "Closed-loop credit card fraud detection under selection bias: simulator, point-in-time features, and bias-corrected retraining."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Devanshi Dadoo" }]
+keywords = ["fraud-detection", "selection-bias", "counterfactual-evaluation", "feedback-loops", "ieee-cis"]
+
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "scipy>=1.10",
+  "pyyaml>=6.0",
+  "matplotlib>=3.7",
+  "pyarrow>=12.0",
+]
+
+[project.optional-dependencies]
+gbdt = ["lightgbm>=4.0"]
+dev = ["pytest>=7.4", "hypothesis>=6.80", "ruff>=0.1"]
+
+[project.scripts]
+clfraud = "clfraud.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Beyond the defaults: import hygiene, comprehension and simplification hints.
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+  "E501",    # line length is enforced by the formatter, not by flagging prose in docstrings
+  "SIM108",  # ternaries are not always clearer than an if/else
+  "B905",    # zip(strict=) is 3.10+, and the zips here are length-matched by construction
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests name unused locals to document what a fixture returns.
+"tests/*" = ["F841", "C408"]

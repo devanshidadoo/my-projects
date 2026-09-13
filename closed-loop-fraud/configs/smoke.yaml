@@ -1,0 +1,40 @@
+# Fast end-to-end run for CI and for checking a change did not break the pipeline.
+# Finishes in well under a minute; the numbers are not meaningful at this scale.
+name: smoke
+description: Tiny end-to-end run used by `make smoke` and the CI workflow.
+output_dir: results/smoke
+
+data:
+  source: synthetic
+  synthetic:
+    n_transactions: 40000
+    n_months: 8
+    n_cards: 900
+    n_merchants: 220
+    n_devices: 600
+    n_addr: 60
+    n_mcc: 20
+    hot_cell_count: 6
+    seed: 1
+
+loop:
+  cycle_days: 30.0
+  n_cycles: 8
+  warmup_cycles: 2
+  train_window_cycles: 3
+  recency_half_life_cycles: null
+  decline_budget: 0.06
+  max_train_rows: 30000
+  seed: 11
+  model: {n_estimators: 60, num_leaves: 16}
+
+baseline_arm: naive
+oracle_arm: oracle
+
+arms:
+  - name: oracle
+    oracle_labels: true
+  - name: naive
+  - name: explore_ipw
+    exploration: {rate: 0.03, mode: cost_aware}
+    weights: {scheme: ipw}

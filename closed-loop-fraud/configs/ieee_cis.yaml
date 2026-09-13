@@ -1,0 +1,40 @@
+# Real-data configuration.
+#
+# Requires the Kaggle competition files in data/raw/:
+#     kaggle competitions download -c ieee-fraud-detection && unzip -d data/raw
+#
+# What runs here and what does not: the feature engine, the leakage audit and the static model
+# benchmark all run on real data and are the reason this adapter exists. The closed-loop arms
+# cannot -- a real log has no counterfactual label for a transaction that was declined, so there
+# is nothing to evaluate a would-be-declined decision against. That is precisely the gap the
+# synthetic environment fills. See docs/METHODOLOGY.md, "Why a simulator".
+name: ieee_cis
+description: IEEE-CIS Fraud Detection, canonicalised onto the project schema.
+output_dir: results/ieee_cis
+
+data:
+  source: ieee_cis
+  raw_dir: data/raw
+  stretch_months: 18     # ~182 real days rescaled onto the 18-cycle horizon; see the adapter
+
+loop:
+  cycle_days: 30.0
+  n_cycles: 18
+  warmup_cycles: 2
+  train_window_cycles: 3
+  recency_half_life_cycles: null
+  decline_budget: 0.06
+  max_train_rows: 200000
+  seed: 4242
+  model: {n_estimators: 300, num_leaves: 48}
+
+baseline_arm: naive
+oracle_arm: oracle
+
+arms:
+  - name: oracle
+    oracle_labels: true
+  - name: naive
+  - name: explore_ipw
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights: {scheme: ipw}

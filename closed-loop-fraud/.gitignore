@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Generated experiment outputs. Committed figures live in docs/figures/ instead.
+results/
+data/cache/
+data/raw/
+data/processed/
+
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store

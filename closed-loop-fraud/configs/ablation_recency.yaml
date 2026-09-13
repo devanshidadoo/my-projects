@@ -1,0 +1,46 @@
+# Ablation: hard trailing window vs. exponential recency decay.
+#
+# Same data, same arms, one changed line. A hard window makes the loop oscillate -- block,
+# starve, forget wholesale, flood, relearn -- while exponential decay erodes smoothly. Both are
+# real retraining designs and they fail differently, which is the finding.
+name: ablation_recency
+description: Retraining memory shape, holding everything else fixed.
+output_dir: results/ablation_recency
+
+data:
+  source: synthetic
+  synthetic:
+    n_transactions: 590540
+    n_months: 18
+    n_cards: 13553
+    n_merchants: 2400
+    n_devices: 9000
+    n_mcc: 120
+    n_hour_buckets: 6
+    hot_cell_count: 40
+    hot_cell_life_months: 2
+    hot_cell_share: 0.75
+    seed: 20250314
+
+loop:
+  cycle_days: 30.0
+  n_cycles: 18
+  warmup_cycles: 2
+  train_window_cycles: 6
+  recency_half_life_cycles: 1.5
+  explore_window_cycles: 12
+  decline_budget: 0.06
+  max_train_rows: 200000
+  seed: 4242
+  model: {n_estimators: 300, num_leaves: 48}
+
+baseline_arm: naive
+oracle_arm: oracle
+
+arms:
+  - name: oracle
+    oracle_labels: true
+  - name: naive
+  - name: explore_ipw
+    exploration: {rate: 0.02, mode: cost_aware}
+    weights: {scheme: ipw}
