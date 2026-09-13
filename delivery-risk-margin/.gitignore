@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+build/
+dist/
+.venv/
+venv/
+
+# Rebuildable: the warehouse and the feature cache.
+data/
+
+# Throwaway runs are ignored; the committed headline results are what docs/RESULTS.md is
+# rendered from, so they are tracked. (A negation cannot re-include a file inside an excluded
+# directory, hence `results/*` rather than `results/`.)
+results/*
+!results/headline/
+results/headline/cache/

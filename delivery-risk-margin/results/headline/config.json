@@ -1,0 +1,127 @@
+{
+  "name": "headline",
+  "description": "100K-order warehouse, point-in-time features over nine tables, calibrated risk and cause models, and every decision rule from a decile heuristic to a budget-constrained margin-optimised assignment.\n",
+  "output_dir": "results/headline",
+  "seed": 7,
+  "data": {
+    "source": "synthetic",
+    "database_url": "sqlite:///data/deliveryrisk.db",
+    "synthetic": {
+      "n_orders": 99441,
+      "n_unique_customers": 96096,
+      "n_sellers": 3095,
+      "n_products": 32951,
+      "span_days": 730,
+      "extract_lag_days": 45.0,
+      "seed": 7,
+      "price_log_mu": 4.33,
+      "price_log_sigma": 0.97,
+      "freight_base": 5.2,
+      "freight_per_kg": 3.4,
+      "freight_per_1000km": 4.6,
+      "items_extra_lambda": 0.133,
+      "handling_floor_days": 0.35,
+      "handling_mu_merchant": 0.62,
+      "handling_mu_warehouse": 0.1,
+      "handling_sigma": 0.7,
+      "seller_quality_sigma": 0.42,
+      "stall_share": 0.08,
+      "stall_median_days": 5.0,
+      "stall_log_sigma": 1.2,
+      "backlog_congestion": 0.09,
+      "backlog_cap": 40.0,
+      "weekend_handling_penalty": 1.1,
+      "growth_start": 0.8,
+      "growth_end": 1.25,
+      "peak_amplitude": 1.5,
+      "capacity_headroom": 1.8,
+      "transit_floor_share": 0.34,
+      "transit_sigma": 0.52,
+      "transit_speed_scale": 0.5,
+      "capacity_congestion": 0.85,
+      "incident_rate_per_carrier_year": 3.5,
+      "incident_days_mu": 9.0,
+      "incident_transit_multiplier": 1.85,
+      "promise_transit_multiple": 1.8,
+      "promise_buffer_days": null,
+      "promise_noise_days": 2.2,
+      "target_late_rate": 0.079,
+      "review_base_score": 4.42,
+      "review_late_penalty": 0.42,
+      "review_noise": 0.92,
+      "approval_lag_hours_card": 0.35,
+      "approval_lag_hours_boleto": 30.0,
+      "cancelled_share": 0.021,
+      "nudge_handling_reduction": 0.55,
+      "nudge_compliance_merchant": 0.72,
+      "nudge_compliance_warehouse": 0.3,
+      "expedite_transit_reduction": 0.42
+    }
+  },
+  "features": {
+    "mode": "point_in_time",
+    "trailing_days": 30.0,
+    "prior_weight": 15.0,
+    "prior_rate": null,
+    "handling_floor_days": 0.35,
+    "transit_floor_share": 0.34
+  },
+  "split": {
+    "train_share": 0.6,
+    "valid_share": 0.15
+  },
+  "model": {
+    "kind": "gbdt",
+    "n_estimators": 1200,
+    "learning_rate": 0.03,
+    "num_leaves": 15,
+    "min_child_samples": 80,
+    "subsample": 0.9,
+    "colsample": 0.8,
+    "reg_lambda": 1.0,
+    "C": 0.5,
+    "max_categories": 40,
+    "seed": 13
+  },
+  "calibration": {
+    "method": "isotonic",
+    "n_bins": 20
+  },
+  "economics": {
+    "freight_margin_share": 0.1,
+    "default_margin_rate": 0.28,
+    "support_cost": 4.5,
+    "voucher_prob": 0.22,
+    "voucher_share": 0.12,
+    "churn_per_bad_review": 0.35,
+    "repeat_horizon_orders": 2.5,
+    "review_damage": 0.3,
+    "margin_rates": {}
+  },
+  "actions": {
+    "nudge_cost": 1.2,
+    "expedite_multiplier": 1.0,
+    "expedite_weight_rate": 0.05
+  },
+  "uplift": {
+    "rho_nudge": 0.46,
+    "rho_expedite": 0.71
+  },
+  "policies": {
+    "fixed_rates": [
+      0.1,
+      0.2
+    ],
+    "budget_share": 0.5,
+    "budget_grid": [
+      0.05,
+      0.1,
+      0.2,
+      0.35,
+      0.5,
+      0.75,
+      1.0,
+      1.5
+    ]
+  }
+}

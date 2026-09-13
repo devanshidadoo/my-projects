@@ -1,0 +1,29 @@
+# Fast end-to-end run for CI and for checking that a change did not break the pipeline.
+# Finishes in well under a minute; the numbers are not meaningful at this scale.
+name: smoke
+description: Tiny end-to-end run used by `make smoke` and the CI workflow.
+output_dir: results/smoke
+seed: 11
+
+data:
+  source: synthetic
+  database_url: sqlite:///data/smoke.db
+  synthetic:
+    n_orders: 12000
+    n_unique_customers: 11500
+    n_sellers: 320
+    n_products: 2500
+    span_days: 400
+    seed: 3
+
+features:
+  trailing_days: 30.0
+  prior_weight: 40.0
+
+split: {train_share: 0.6, valid_share: 0.15}
+model: {kind: gbdt, n_estimators: 120, num_leaves: 15, min_child_samples: 40}
+calibration: {method: isotonic, n_bins: 10}
+policies:
+  fixed_rates: [0.10, 0.20]
+  budget_share: 0.5
+  budget_grid: [0.1, 0.25, 0.5, 1.0]

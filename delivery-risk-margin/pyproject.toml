@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deliveryrisk"
+version = "0.4.0"
+description = "Order-level delivery risk prediction over a nine-table warehouse, with a margin-optimised intervention policy."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Devanshi Dadoo" }]
+keywords = [
+  "delivery-risk", "point-in-time-features", "uplift", "decision-policy",
+  "probability-calibration", "e-commerce", "olist",
+]
+
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "scipy>=1.10",
+  "pyyaml>=6.0",
+  "matplotlib>=3.7",
+  "pyarrow>=12.0",
+]
+
+[project.optional-dependencies]
+gbdt = ["lightgbm>=4.0"]
+mysql = ["sqlalchemy>=2.0", "pymysql>=1.1"]
+dev = ["pytest>=7.4", "hypothesis>=6.80", "ruff>=0.1"]
+
+[project.scripts]
+drisk = "deliveryrisk.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::FutureWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+  "E501",    # line length is enforced by the formatter, not by flagging prose in docstrings
+  "SIM108",  # a ternary is not always clearer than an if/else
+  "B905",    # zip(strict=) is 3.10+, and the zips here are length-matched by construction
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F841", "C408"]
