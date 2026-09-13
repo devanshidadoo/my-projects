@@ -55,6 +55,17 @@ Portability
 One dialect of SQL for SQLite and MySQL 8: numeric ``RANGE`` frames, named ``WINDOW`` clauses and
 ``CREATE TABLE AS SELECT`` behave the same on both. No engine-specific date functions -- which is
 the other reason timestamps are stored as epoch doubles.
+
+Three constructs are banned here because they parse on one engine and not the other, or parse on
+both and mean different things. ``tests/test_sql_artifacts.py`` fails if any of them comes back:
+
+    CREATE INDEX IF NOT EXISTS   SQLite only; a syntax error on MySQL.
+    CAST(x AS INTEGER)           SQLite truncates; MySQL rejects the type name (it wants SIGNED),
+                                 and CAST(x AS SIGNED) does *not* truncate on SQLite.
+    x % y                        On reals, SQLite casts both operands to integers first and MySQL
+                                 does not, so the two engines return different numbers.
+
+The calendar helpers below use ``FLOOR`` and arithmetic only, which means the same thing on both.
 """
 from __future__ import annotations
 
@@ -414,6 +425,47 @@ def entity_feature_columns(spec: EntitySpec) -> list[str]:
     return cols
 
 
+# --------------------------------------------------------------------------- portable calendar
+# Calendar features from epoch doubles, using nothing but FLOOR and arithmetic.
+#
+# The obvious spellings are not portable, and both failure modes are silent rather than loud:
+#
+#   CAST(x AS INTEGER)   SQLite truncates; MySQL rejects the type name outright (it wants
+#                        SIGNED), and `CAST(x AS SIGNED)` -- the spelling that parses on both --
+#                        does *not* truncate on SQLite, so the two engines disagree on values.
+#   x % 86400.0          SQLite casts both operands to integers first, so 1000.5 % 86400 is
+#                        1000.0; MySQL returns the real remainder 1000.5.
+#
+# FLOOR exists on MySQL and on SQLite 3.35+ (2021) and means the same thing on both. Every
+# timestamp here is non-negative, so floor and truncation coincide and the values are unchanged.
+
+
+def _floor(expr: str) -> str:
+    return f"FLOOR({expr})"
+
+
+def _mod(expr: str, n: float) -> str:
+    """``expr mod n`` without the ``%`` operator, which the two engines disagree about."""
+    return f"(({expr}) - FLOOR(({expr}) / {n}) * {n})"
+
+
+def _day_number(col: str) -> str:
+    return _floor(f"{col} / {DAY}")
+
+
+def _day_of_week(col: str) -> str:
+    """0 = Sunday: the epoch used here (2017-01-01) is itself a Sunday."""
+    return _mod(_day_number(col), 7)
+
+
+def _hour_of_day(col: str) -> str:
+    return _floor(f"{_mod(col, DAY)} / 3600.0")
+
+
+def _week_of_year(col: str) -> str:
+    return _floor(f"{_mod(_day_number(col), 365)} / 7.0")
+
+
 #: Features known at approval from the order itself. Nothing here reads a post-approval column.
 STATIC_FEATURE_SQL = f"""
     (f.estimated_delivery_ts - f.purchase_ts) / {DAY}      AS promise_days,
@@ -429,11 +481,11 @@ STATIC_FEATURE_SQL = f"""
     f.distance_km, f.base_transit_days, f.reliability_index, f.daily_capacity,
     (f.estimated_delivery_ts - f.approved_ts) / ({DAY} * f.base_transit_days) AS slack_transit_ratio,
     CASE WHEN f.origin_state = f.dest_state THEN 1 ELSE 0 END AS same_state,
-    CAST(f.approved_ts / {DAY} AS INTEGER) % 7             AS approved_dow,
-    CAST(f.approved_ts % {DAY} / 3600.0 AS INTEGER)        AS approved_hour,
-    CASE WHEN CAST(f.approved_ts / {DAY} AS INTEGER) % 7 IN (5, 6) THEN 1 ELSE 0 END
+    {_day_of_week("f.approved_ts")}                        AS approved_dow,
+    {_hour_of_day("f.approved_ts")}                        AS approved_hour,
+    CASE WHEN {_day_of_week("f.approved_ts")} IN (5, 6) THEN 1 ELSE 0 END
         AS approved_weekend,
-    CAST(CAST(f.purchase_ts / {DAY} AS INTEGER) % 365 / 7 AS INTEGER) AS purchase_week_of_year,
+    {_week_of_year("f.purchase_ts")}                       AS purchase_week_of_year,
     f.payment_type, f.service_level, f.fulfilment_mode, f.category,
     f.origin_state, f.dest_state, f.carrier_id
 """
