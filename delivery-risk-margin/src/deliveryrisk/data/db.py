@@ -176,18 +176,62 @@ class Database:
 
 
 def _split_statements(script: str) -> list[str]:
-    """Split a DDL script on semicolons, dropping comments and blanks.
+    """Split a DDL script into statements on semicolons *outside* string literals.
 
-    Good enough for the DDL this project emits -- no procedures, no string literals containing
-    semicolons -- and the alternative is a SQL parser dependency for nine CREATE TABLEs.
+    MySQL has no ``executescript``, so the script has to be split here -- and the naive version
+    (``script.split(";")``) is wrong on this project's own DDL in two places, both of which CI
+    found before a human did:
+
+    * ``COMMENT 'acquisition time; safe as a feature'`` -- a semicolon inside a quoted string,
+      which cuts the statement in half mid-literal.
+    * ``-- deliveryrisk operational schema (mysql); 9 tables`` -- a semicolon inside a line
+      comment, same outcome.
+
+    So comments are stripped first, and the scan tracks quote state, honouring both SQL's
+    doubled-quote escape (``''``) and the backslash escape MySQL also accepts.
     """
-    out = []
-    for raw in script.split(";"):
-        stmt = "\n".join(
-            line for line in raw.splitlines() if line.strip() and not line.strip().startswith("--")
-        ).strip()
-        if stmt:
-            out.append(stmt)
+    lines = []
+    for line in script.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("--"):
+            continue
+        lines.append(line)
+    body = "\n".join(lines)
+
+    out: list[str] = []
+    buf: list[str] = []
+    quote: str | None = None
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if quote:
+            if ch == "\\" and i + 1 < len(body):  # MySQL honours backslash escapes in strings
+                buf.append(ch)
+                buf.append(body[i + 1])
+                i += 2
+                continue
+            if ch == quote:
+                if i + 1 < len(body) and body[i + 1] == quote:  # '' is an escaped quote
+                    buf.append(ch)
+                    buf.append(ch)
+                    i += 2
+                    continue
+                quote = None
+            buf.append(ch)
+        elif ch in ("'", '"', "`"):
+            quote = ch
+            buf.append(ch)
+        elif ch == ";":
+            stmt = "".join(buf).strip()
+            if stmt:
+                out.append(stmt)
+            buf = []
+        else:
+            buf.append(ch)
+        i += 1
+    tail = "".join(buf).strip()
+    if tail:
+        out.append(tail)
     return out
 
 
